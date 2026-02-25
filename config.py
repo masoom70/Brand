@@ -1,4 +1,5 @@
 from os import getenv
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,7 +28,7 @@ class Config:
         self.SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/RessoUpdates")
         self.SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/DOCTOR_CHATTING_GROUP")
 
-        self.API_KEY = getenv("API_KEY")
+        self.API_KEY = getenv("API_KEY", "d25f05_Sp_QkEWGkDF5Q8SnY3WXKvUch1P3piul")
         self.API_URL = getenv("API_URL", "https://beta.fallenapi.fun")
         self.AUTO_LEAVE: bool = getenv("AUTO_LEAVE", "False").lower() == "true"
         self.AUTO_END: bool = getenv("AUTO_END", "False").lower() == "true"

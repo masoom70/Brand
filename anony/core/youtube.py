@@ -3,19 +3,19 @@
 # This file is part of AnonXMusic
 
 
-import os
-import re
-import yt_dlp
-import random
 import asyncio
-import aiohttp
+import os
+import random
+import re
 from pathlib import Path
 
+import aiohttp
+import yt_dlp
 from py_yt import Playlist, VideosSearch
 
-from ._api import FallenApi
 from anony import config, logger
 from anony.helpers import Track, utils
+from ._api import FallenApi
 
 
 class YouTube:
@@ -24,6 +24,8 @@ class YouTube:
         self.cookies = []
         self.checked = False
         self.cookie_dir = "anony/cookies"
+        self.dl_list = []
+        self.dl_dict = {}
         self.fallen = FallenApi()
         self.warned = False
         self.regex = re.compile(
@@ -97,14 +99,18 @@ class YouTube:
                     video=video,
                 )
                 tracks.append(track)
-        except:
+        except Exception:
             pass
         return tracks
 
     async def download(self, video_id: str, video: bool = False) -> str | None:
+        if video_id in self.dl_list:
+            return self.dl_dict[video_id]
+
         url = self.base + video_id
         if not video and config.API_KEY and config.API_URL:
             if file_path := await self.fallen.download_track(video_id, url):
+                self.dl_dict[video_id] = file_path
                 return file_path
 
         ext = "mp4" if video else "webm"
@@ -149,4 +155,6 @@ class YouTube:
                     return None
             return filename
 
-        return await asyncio.to_thread(_download)
+        file_path = await asyncio.to_thread(_download)
+        self.dl_dict[video_id] = file_path
+        return file_path

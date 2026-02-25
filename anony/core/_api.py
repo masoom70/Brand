@@ -1,13 +1,14 @@
+import asyncio
 import os
 import re
-import uuid
-import asyncio
-import aiohttp
 import urllib.parse
-from pathlib import Path
+import uuid
 from dataclasses import dataclass
+from pathlib import Path
 
+import aiohttp
 from pyrogram import errors
+
 from anony import config, logger, app
 
 
@@ -99,7 +100,7 @@ class FallenApi:
 
                         return str(save_path)
 
-            except aiohttp.ClientError as e:
+            except aiohttp.ClientError:
                 pass
             except asyncio.TimeoutError:
                 pass
@@ -112,10 +113,6 @@ class FallenApi:
         return None
 
     async def download_track(self, video_id: str, url: str) -> str | None:
-        for file in os.scandir(self.download_dir):
-            if file.is_file() and video_id in file.name:
-                return str(file.path)
-
         track = await self.get_track(url)
         if not track:
             logger.warning("[❌] No track metadata found.")
@@ -128,9 +125,9 @@ class FallenApi:
                 file_path = await msg.download()
                 return file_path
             except errors.FloodWait as e:
-                logger.warning(f"[FLOODWAIT] Sleeping {e.value}s before retry.")
+                logger.warning(f"[Flood Wait] Sleeping {e.value}s before retry.")
                 await asyncio.sleep(e.value + 60)
-                return await self.download_track(url)
+                return await self.download_track(video_id, url)
             except Exception as e:
                 logger.warning(f"[TG DOWNLOAD ERROR] {e}")
                 return None
