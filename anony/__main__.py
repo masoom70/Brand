@@ -40,6 +40,9 @@ async def main():
     app.bl_users.update(await db.get_blacklisted())
     logger.info(f"Loaded {len(app.sudoers)} sudo users.")
 
+    from anony.helpers import thumb
+    await thumb.get_session()
+
     await idle()
     await stop()
 
