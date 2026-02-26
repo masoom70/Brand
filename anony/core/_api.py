@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import aiohttp
+import aiofiles
 from pyrogram import errors
 
 from anony import config, logger, app
@@ -35,6 +36,7 @@ class FallenApi:
         self.api_key = config.API_KEY
         self.retries = retries
         self.timeout = aiohttp.ClientTimeout(total=timeout)
+        self.session = aiohttp.ClientSession(timeout=self.timeout)
         self.download_dir = Path("downloads")
 
     def _get_headers(self) -> dict[str, str]:
@@ -48,57 +50,57 @@ class FallenApi:
 
         for attempt in range(1, self.retries + 1):
             try:
-                async with aiohttp.ClientSession(timeout=self.timeout) as session:
-                    async with session.get(endpoint, headers=self._get_headers()) as resp:
-                        data = await resp.json(content_type=None)
+                async with self.session.get(endpoint, headers=self._get_headers()) as resp:
+                    data = await resp.json(content_type=None)
 
-                        if resp.status == 200 and isinstance(data, dict):
-                            return MusicTrack.from_dict(data)
+                    if resp.status == 200 and isinstance(data, dict):
+                        return MusicTrack.from_dict(data)
 
-                        error_msg = data.get("message") if isinstance(data, dict) else None
-                        status = data.get("status", resp.status) if isinstance(data, dict) else resp.status
-                        logger.warning(f"[API ERROR] {error_msg or 'Unexpected error'} (status {status})")
-                        return None
+                    error_msg = data.get("message") if isinstance(data, dict) else None
+                    status = data.get("status", resp.status) if isinstance(data, dict) else resp.status
+                    logger.warning(f"[API ERROR] {error_msg or 'Unexpected error'} (status {status})")
+                    return None
 
             except aiohttp.ClientError as e:
                 logger.warning(f"[NETWORK ERROR] Attempt {attempt}/{self.retries} failed: {e}")
+                break
             except asyncio.TimeoutError:
                 logger.warning(f"[TIMEOUT] Attempt {attempt}/{self.retries} exceeded timeout.")
+                break
             except Exception as e:
                 logger.warning(f"[UNEXPECTED ERROR] {e}")
-
+                break
             await asyncio.sleep(4)
 
         logger.warning("[FAILED] All retry attempts exhausted.")
         return None
 
     async def download_cdn(self, video_id: str, cdn_url: str) -> str | None:
-        for attempt in range(1, self.retries + 1):
+        for _ in range(1, self.retries + 1):
             try:
-                async with aiohttp.ClientSession(timeout=self.timeout) as session:
-                    async with session.get(cdn_url) as resp:
-                        if resp.status != 200:
-                            logger.warning(f"[HTTP {resp.status}] Failed to download from {cdn_url}")
-                            return None
+                async with self.session.get(cdn_url) as resp:
+                    if resp.status != 200:
+                        logger.warning(f"[HTTP {resp.status}] Failed to download from {cdn_url}")
+                        return None
 
-                        cd = resp.headers.get("Content-Disposition")
-                        if cd:
-                            match = re.findall(r'filename="?([^";]+)"?', cd)
-                            filename = match[0] if match else None
-                        else:
-                            filename = None
+                    cd = resp.headers.get("Content-Disposition")
+                    if cd:
+                        match = re.findall(r'filename="?([^";]+)"?', cd)
+                        filename = match[0] if match else None
+                    else:
+                        filename = None
 
-                        if not filename:
-                            filename = os.path.basename(cdn_url.split("?")[0]) or f"{uuid.uuid4().hex[:8]}.mp3"
+                    if not filename:
+                        filename = os.path.basename(cdn_url.split("?")[0]) or f"{uuid.uuid4().hex[:8]}.mp3"
 
-                        save_path = self.download_dir / filename
+                    save_path = self.download_dir / filename
 
-                        with open(save_path, "wb") as f:
-                            async for chunk in resp.content.iter_chunked(16 * 1024):
-                                if chunk:
-                                    f.write(chunk)
+                    async with aiofiles.open(save_path, "wb") as f:
+                        async for chunk in resp.content.iter_chunked(16 * 1024):
+                            if chunk:
+                                await f.write(chunk)
 
-                        return str(save_path)
+                    return str(save_path)
 
             except aiohttp.ClientError:
                 pass
@@ -106,7 +108,6 @@ class FallenApi:
                 pass
             except Exception as e:
                 logger.warning(f"[{video_id}]: {e}")
-
             await asyncio.sleep(4)
 
         logger.warning(f"[{video_id}]: Download failed.")
@@ -115,7 +116,6 @@ class FallenApi:
     async def download_track(self, video_id: str, url: str) -> str | None:
         track = await self.get_track(url)
         if not track:
-            logger.warning("[❌] No track metadata found.")
             return None
 
         dl_url = track.cdnurl
@@ -125,7 +125,7 @@ class FallenApi:
                 file_path = await msg.download()
                 return file_path
             except errors.FloodWait as e:
-                logger.warning(f"[Flood Wait] Sleeping {e.value}s before retry.")
+                logger.warning(f"[FloodWait] Sleeping {e.value}s before retry.")
                 await asyncio.sleep(e.value + 60)
                 return await self.download_track(video_id, url)
             except Exception as e:

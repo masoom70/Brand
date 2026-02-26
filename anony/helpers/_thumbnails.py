@@ -18,13 +18,13 @@ class Thumbnail:
         self.dfont = ImageFont.truetype("anony/helpers/font2.otf", 23)
         self.nfont = ImageFont.truetype("anony/helpers/font.ttf", 15)
         self.tfont = ImageFont.truetype("anony/helpers/font.ttf", 40)
+        self.session = aiohttp.ClientSession()
 
     async def save_thumb(self, output_path: str, url: str) -> str:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                with open(output_path, "wb") as f:
-                  f.write(await resp.read())
-            return output_path
+        async with self.session.get(url) as resp:
+            with open(output_path, "wb") as f:
+                f.write(await resp.read())
+        return output_path
 
     def clear(self, text):
         ctext = text.strip()[:25]
