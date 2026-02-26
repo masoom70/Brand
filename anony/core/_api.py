@@ -36,7 +36,7 @@ class FallenApi:
         self.api_key = config.API_KEY
         self.retries = retries
         self.timeout = aiohttp.ClientTimeout(total=timeout)
-        self.session = aiohttp.ClientSession(timeout=self.timeout)
+        self.session: aiohttp.ClientSession | None = None
         self.download_dir = Path("downloads")
 
     def _get_headers(self) -> dict[str, str]:
@@ -44,6 +44,10 @@ class FallenApi:
             "X-API-Key": self.api_key,
             "Accept": "application/json",
         }
+
+    async def get_session(self) -> None:
+        if not self.session:
+            self.session = aiohttp.ClientSession(timeout=self.timeout)
 
     async def get_track(self, url: str) -> MusicTrack | None:
         endpoint = f"{self.api_url}/api/track?url={urllib.parse.quote(url)}"
