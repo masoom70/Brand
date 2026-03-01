@@ -126,14 +126,14 @@ class FallenApi:
         if re.match(r"https?://t\.me/([^/]+)/(\d+)", dl_url):
             try:
                 msg = await app.get_messages(message_ids=dl_url)
+                if msg.video:
+                    return None
                 file_path = await msg.download()
                 return file_path
             except errors.FloodWait as e:
-                logger.warning(f"[FloodWait] Sleeping {e.value}s before retry.")
-                await asyncio.sleep(e.value + 60)
-                return await self.download_track(video_id, url)
+                logger.warning(f"[FloodWait]: {e.value}s")
             except Exception as e:
-                logger.warning(f"[TG DOWNLOAD ERROR] {e}")
+                logger.warning(f"[TG DOWNLOAD ERROR]: {e}")
                 return None
 
         return await self.download_cdn(video_id, dl_url)
