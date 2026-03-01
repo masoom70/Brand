@@ -1,3 +1,5 @@
+import os
+
 from pymongo import AsyncMongoClient
 
 from anony import app
@@ -12,6 +14,15 @@ class Cache:
         self.cachedb = self.db.cache
 
         self.SLOG: int = -1001065650212
+        self.load_cache()
+
+    def load_cache(self) -> None:
+        with os.scandir("downloads") as entries:
+            for entry in entries:
+                fname = entry.name.split(".")[0]
+                fpath = entry.path
+                self.dl_list.append(fname)
+                self.dl_dict[fname] = fpath
 
     async def get_song(self, id: str) -> int | None:
         if id not in self.cache:
@@ -44,11 +55,14 @@ class Cache:
             return self.dl_dict[id]
 
         if mid := await self.get_song(id):
-            msg = await app.get_messages(
-                chat_id=self.SLOG,
-                message_ids=mid,
-            )
-            file = await msg.download()
+            try:
+                msg = await app.get_messages(
+                    chat_id=self.SLOG,
+                    message_ids=mid,
+                )
+                file = await msg.download()
+            except Exception:
+                return None
             self.dl_list.append(id)
             self.dl_dict[id] = file
             return file
