@@ -14,7 +14,7 @@ import yt_dlp
 from py_yt import Playlist, VideosSearch
 
 from anony import config, logger
-from anony.helpers import Track, utils
+from anony.helpers import cache, Track, utils
 from ._api import FallenApi
 
 
@@ -24,8 +24,6 @@ class YouTube:
         self.cookies = []
         self.checked = False
         self.cookie_dir = "anony/cookies"
-        self.dl_list = []
-        self.dl_dict = {}
         self.fallen = FallenApi()
         self.warned = False
         self.regex = re.compile(
@@ -104,13 +102,13 @@ class YouTube:
         return tracks
 
     async def download(self, video_id: str, video: bool = False) -> str | None:
-        if video_id in self.dl_list:
-            return self.dl_dict[video_id]
+        if cached := await cache.fetch_song(video_id):
+            return cached
 
         url = self.base + video_id
         if not video and config.API_KEY and config.API_URL:
             if file_path := await self.fallen.download_track(video_id, url):
-                self.dl_dict[video_id] = file_path
+                await cache.handle_dl(file_path, video_id)
                 return file_path
 
         ext = "mp4" if video else "webm"
@@ -155,6 +153,9 @@ class YouTube:
                     return None
             return filename
 
-        file_path = await asyncio.to_thread(_download)
-        self.dl_dict[video_id] = file_path
-        return file_path
+        await asyncio.to_thread(_download)
+        try:
+            await cache.handle_dl(filename, video_id)
+        except Exception:
+            pass
+        return filename

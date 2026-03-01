@@ -45,6 +45,8 @@ async def main():
     await thumb.get_session()
 
     await idle()
+    await yt.fallen.session.close()
+    await thumb.session.close()
     await stop()
 
 
