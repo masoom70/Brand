@@ -3,10 +3,6 @@
 # This file is part of AnonXMusic
 
 
-import multiprocessing
-multiprocessing.set_start_method("fork", force=True)
-print(0)
-
 import asyncio
 import signal
 import importlib
