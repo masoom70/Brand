@@ -3,7 +3,9 @@
 # This file is part of AnonXMusic
 
 
-print(1)
+import multiprocessing
+multiprocessing.set_start_method("fork", force=True)
+
 import time
 import asyncio
 import logging
