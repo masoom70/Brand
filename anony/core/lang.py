@@ -97,8 +97,7 @@ class Language:
                 try:
                     return await func(*args, **kwargs)
                 except (errors.Forbidden, errors.exceptions.Forbidden):
-                    logger.warning(f"Cannot write to chat {chat.id}, leaving...")
-                    return await chat.leave()
+                    return
 
             return wrapper
 
