@@ -3,8 +3,8 @@
 # This file is part of AnonXMusic
 
 
-import multiprocessing
-multiprocessing.set_start_method("forkserver", force=True)
+#import multiprocessing
+#multiprocessing.set_start_method("forkserver", force=True)
 
 import time
 import asyncio
