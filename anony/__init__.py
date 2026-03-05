@@ -4,7 +4,7 @@
 
 
 import multiprocessing
-multiprocessing.set_start_method("fork", force=True)
+multiprocessing.set_start_method("forkserver", force=True)
 
 import time
 import asyncio
