@@ -21,7 +21,7 @@ async def _watcher_vc(_, m: types.Message):
 
 async def auto_leave():
     while True:
-        await asyncio.sleep(1800)
+        await asyncio.sleep(3600)
         if not await db.auto_leave():
             continue
         logger.info("Running auto-leave task...")
@@ -31,14 +31,16 @@ async def auto_leave():
                 chats = [dialog.chat.id async for dialog in ub.get_dialogs()
                          if dialog.chat.type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]][-25:]
                 for chat in chats:
-                    if left >= 20:
-                        break
                     if chat in db.active_calls:
                         continue
                     if chat in [app.logger, -1001686672798, -1001549206010]:
                         continue
-                    await ub.leave_chat(chat)
-                    left += 1
+                    try:
+                        await ub.leave_chat(chat)
+                        left += 1
+                        logger.info(f"Left {chat}")
+                    except Exception as ex:
+                        logger.warning(f"Failed to leave {chat}: {ex}")
                     await asyncio.sleep(5)
             except asyncio.CancelledError:
                 raise
