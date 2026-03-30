@@ -86,6 +86,10 @@ class Inline:
 
         return self.ikm(rows)
 
+
+    def auto_play(self, text: str) -> types.InlineKeyboardMarkup:
+        return self.ikm([[self.ikb(text=text, callback_data="autoplay")]])
+
     def lang_markup(self, _lang: str) -> types.InlineKeyboardMarkup:
         langs = lang.get_languages()
 

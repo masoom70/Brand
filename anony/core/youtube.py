@@ -82,6 +82,30 @@ class YouTube:
             )
         return None
 
+    async def get_next(self, id: str) -> Track | None:
+        url = f"{self.base}{id}&list=RD{id}"
+        try:
+            _result = await Playlist.get(url)
+            if not _result or not _result.get("videos"):
+                return None
+            videos = _result.get("videos")
+            random.shuffle(videos)
+            data = videos[0]
+            track = Track(
+                id=data.get("id"),
+                channel_name=data.get("channel", {}).get("name", ""),
+                duration=data.get("duration"),
+                duration_sec=utils.to_seconds(data.get("duration")),
+                title=data.get("title")[:25],
+                thumbnail=data.get("thumbnails")[-1].get("url").split("?")[0],
+                url=data.get("link"),
+                view_count="",
+                video=False,
+            )
+            return track
+        except Exception:
+            return None
+
     async def playlist(self, limit: int, user: str, url: str, video: bool) -> list[Track | None]:
         tracks = []
         try:

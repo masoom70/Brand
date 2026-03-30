@@ -33,6 +33,7 @@ class TgCall(PyTgCalls):
         client = await db.get_assistant(chat_id)
         queue.clear(chat_id)
         await db.remove_call(chat_id)
+        await db.set_autoplay(chat_id, False)
 
         try:
             await client.leave_call(chat_id, close=False)
@@ -141,9 +142,10 @@ class TgCall(PyTgCalls):
 
 
     async def play_next(self, chat_id: int) -> None:
+        curr = queue.get_current(chat_id)
         media = queue.get_next(chat_id)
         try:
-            if media.message_id:
+            if media and media.message_id:
                 await app.delete_messages(
                     chat_id=chat_id,
                     message_ids=media.message_id,
@@ -153,10 +155,20 @@ class TgCall(PyTgCalls):
         except Exception:
             pass
 
-        if not media:
-            return await self.stop(chat_id)
-
+        autoplay = await db.is_autoplay(chat_id)
         _lang = await lang.get_lang(chat_id)
+        if not media and not autoplay:
+            return await self.stop(chat_id)
+        elif autoplay and not media:
+            _type = isinstance(curr, Track)
+            if not _type:
+                return await self.stop(chat_id)
+            media = await yt.get_next(curr.id)
+            if not media:
+                return await self.stop(chat_id)
+            media.user = _lang["autoplay"]
+            queue.force_add(chat_id, media)
+
         msg = await app.send_message(chat_id=chat_id, text=_lang["play_next"])
         if not media.file_path:
             media.file_path = await yt.download(media.id, video=media.video)

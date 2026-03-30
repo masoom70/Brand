@@ -22,6 +22,7 @@ class MongoDB:
         self.admin_list = {}
         self.active_calls = {}
         self.admin_play = []
+        self.auto_play = []
         self.blacklisted = []
         self.cmd_delete = []
         self.notified = []
@@ -99,6 +100,18 @@ class MongoDB:
             {"$set": {"status": status}},
             upsert=True,
         )
+
+    # AUTOPLAY METHODS
+    async def is_autoplay(self, chat_id: int) -> bool:
+        return chat_id in self.auto_play
+
+    async def set_autoplay(self, chat_id: int, status: bool) -> None:
+        if status:
+            if chat_id in self.auto_play: return
+            self.auto_play.append(chat_id)
+        else:
+            if chat_id not in self.auto_play: return
+            self.auto_play.remove(chat_id)
 
     # AUTH METHODS
     async def _get_auth(self, chat_id: int) -> set[int]:
